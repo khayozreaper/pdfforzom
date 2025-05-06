@@ -23,9 +23,9 @@
     }
 
     video {
-      width: 100vw;
+      width: 100%;
       height: auto;
-      max-height: calc(100vh - 50px);
+      max-height: 100%;
       object-fit: cover;
       border: none;
       cursor: pointer;
@@ -40,52 +40,68 @@
 <body>
   <h1>📸 Tap Anywhere to Capture</h1>
   <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" width="1920" height="1080"></canvas>
+  <canvas id="canvas"></canvas>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
+    let pictures = [];
 
-    // Request camera access with higher resolution
-    navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment',  // Back camera
-        width: { ideal: 1920 },     // Full HD resolution
-        height: { ideal: 1080 }
-      }
-    })
-    .then(stream => { 
-      video.srcObject = stream; 
-    })
-    .catch(err => alert('Camera access denied: ' + err));
+    // Request camera access
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          // Set canvas size to match the video resolution
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        };
+      })
+      .catch(err => alert('Camera access denied: ' + err));
 
     video.addEventListener('click', () => {
-      const ctx = canvas.getContext('2d');
+      if (pictures.length < 3) {
+        const ctx = canvas.getContext('2d');
 
-      // Set canvas size to match video resolution
-      canvas.width = 1920;
-      canvas.height = 1080;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Draw the current frame of the video on the canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const imageDataURL = canvas.toDataURL('image/png');
+        // Capture image data URL
+        const imageDataURL = canvas.toDataURL('image/png');
 
-      // Generate timestamped filename
-      const now = new Date();
-      const pad = n => n.toString().padStart(2, '0');
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const filename = `${pad(now.getDate())}-${monthNames[now.getMonth()]}-${now.getFullYear()}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        // Add image data URL to the pictures array
+        pictures.push(imageDataURL);
 
-      // Generate PDF and save it
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({
-        orientation: 'landscape',  // Use landscape mode for better fit
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
+        // After 3 pictures, generate PDF
+        if (pictures.length === 3) {
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'px',
+            format: [canvas.width, canvas.height]
+          });
 
-      pdf.addImage(imageDataURL, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`${filename}.pdf`);
+          // Add each picture to the PDF
+          pictures.forEach((imgData, index) => {
+            if (index > 0) {
+              pdf.addPage(); // Add new page for each image after the first
+            }
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+          });
+
+          // Save the PDF
+          const now = new Date();
+          const pad = n => n.toString().padStart(2, '0');
+          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const filename = `${pad(now.getDate())}-${monthNames[now.getMonth()]}-${now.getFullYear()}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+          pdf.save(`${filename}.pdf`);
+
+          // Reset for next round of captures
+          pictures = [];
+        }
+      }
     });
   </script>
 </body>
