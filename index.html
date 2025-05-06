@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tap to Capture PDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #000;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+
+    video {
+      width: 100vw;
+      height: auto;
+      max-height: calc(100vh - 50px);
+      object-fit: cover;
+      border: none;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>📸 Tap Anywhere to Capture</h1>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas" width="400" height="300"></canvas>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+
+    // Request camera access
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => alert('Camera access denied: ' + err));
+
+    video.addEventListener('click', () => {
+      const ctx = canvas.getContext('2d');
+
+      // Match canvas size to video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageDataURL = canvas.toDataURL('image/png');
+
+      const now = new Date();
+      const pad = n => n.toString().padStart(2, '0');
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const filename = `${pad(now.getDate())}-${monthNames[now.getMonth()]}-${now.getFullYear()}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(imageDataURL, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`${filename}.pdf`);
+    });
+  </script>
+</body>
+</html>
