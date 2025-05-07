@@ -86,19 +86,26 @@
           // Add each picture to the PDF
           pictures.forEach((imgData, index) => {
             if (index > 0) {
-              pdf.addPage(); // Add new page for each image after the first
+              pdf.addPage();
             }
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
           });
 
-          // Save the PDF
+          // Save the PDF with 12-hour time and prefix
           const now = new Date();
           const pad = n => n.toString().padStart(2, '0');
           const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-          const filename = `${pad(now.getDate())}-${monthNames[now.getMonth()]}-${now.getFullYear()}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+          
+          let hours = now.getHours();
+          const minutes = pad(now.getMinutes());
+          const seconds = pad(now.getSeconds());
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+
+          const filename = `zomato_drop_${pad(now.getDate())}-${monthNames[now.getMonth()]}-${now.getFullYear()}_${pad(hours)}-${minutes}-${seconds}${ampm}`;
           pdf.save(`${filename}.pdf`);
 
-          // Reset for next round of captures
           pictures = [];
         }
       }
